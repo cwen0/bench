@@ -1,0 +1,17 @@
+# Importer Configuration.
+table-sql = "create table t(a int primary key, b double, c varchar(10));"
+
+index-sql = "create unique index u_b on t(b);"
+
+log-level = "info"
+
+worker-count = 100
+job-count = 10000000
+batch = 1000
+
+[db]
+host = "127.0.0.1"
+user = "root"
+password = "yin123"
+name = "test"
+port = 3306
