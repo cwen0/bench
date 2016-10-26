@@ -14,7 +14,7 @@ import (
 
 var CmdPrepare = cli.Command{
 	Name:   "prepare",
-	Usage:  "Generate test case",
+	Usage:  "Generateerate test case",
 	Action: runPrepare,
 	Flags: []cli.Flag{
 		intFlag("count,c", 100, "case count"),
@@ -25,7 +25,7 @@ func genRandomWriteCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("Gen random write case cast: %s", elapsed)
+		log.Printf("Generate random write case cast: %s", elapsed)
 		wg.Done()
 	}()
 	file, err := os.Create(path)
@@ -59,7 +59,7 @@ func genRandomReadCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("Gen random read case cast: %s", elapsed)
+		log.Printf("Generate random read case cast: %s", elapsed)
 		wg.Done()
 	}()
 	file, err := os.Create(path)
@@ -89,7 +89,7 @@ func genOrderWriteCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("Gen oeder write case cast: %s", elapsed)
+		log.Printf("Generate oeder write case cast: %s", elapsed)
 		wg.Done()
 	}()
 	file, err := os.Create(path)
@@ -119,7 +119,7 @@ func genOrderReadCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("Gen order read case cast: %s", elapsed)
+		log.Printf("Generate order read case cast: %s", elapsed)
 		wg.Done()
 	}()
 	file, err := os.Create(path)
@@ -147,7 +147,7 @@ func genRandomRWCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("Gen random read and write case cast: %s", elapsed)
+		log.Printf("Generate random read and write case cast: %s", elapsed)
 		wg.Done()
 	}()
 	file, err := os.Create(path)

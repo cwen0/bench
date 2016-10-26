@@ -24,18 +24,22 @@ var CmdMysql = cli.Command{
 		stringFlag("port,P", "3306", "mysql listen port"),
 		stringFlag("database,d", "test", "test database"),
 		stringFlag("case-path", "", "test case path"),
+		intFlag("worker-count", 1, "parallel worker count"),
+		intFlag("commit-count", 1, "batch commit count"),
 	},
 }
 
 type mysql struct {
-	user     string
-	password string
-	host     string
-	port     string
-	dbName   string
-	casePath string
-	testData []string
-	db       *sql.DB
+	user             string
+	password         string
+	host             string
+	port             string
+	dbName           string
+	casePath         string
+	workerCount      int
+	batchCommitCount int
+	testData         []string
+	db               *sql.DB
 }
 
 func newMysql(ctx *cli.Context) *mysql {
@@ -43,12 +47,14 @@ func newMysql(ctx *cli.Context) *mysql {
 		log.Fatal("Argument case-path is must")
 	}
 	return &mysql{
-		user:     ctx.String("username"),
-		password: ctx.String("password"),
-		host:     ctx.String("host"),
-		port:     ctx.String("port"),
-		dbName:   ctx.String("database"),
-		casePath: ctx.String("case-path"),
+		user:             ctx.String("username"),
+		password:         ctx.String("password"),
+		host:             ctx.String("host"),
+		port:             ctx.String("port"),
+		dbName:           ctx.String("database"),
+		casePath:         ctx.String("case-path"),
+		workerCount:      ctx.Int("worker-count"),
+		batchCommitCount: ctx.Int("commit-count"),
 	}
 }
 
