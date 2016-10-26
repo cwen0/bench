@@ -21,17 +21,16 @@ var CmdPrepare = cli.Command{
 	},
 }
 
-func genRandomWriteCase(dir string, count int, wg *sync.WaitGroup) {
+func genRandomWriteCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 		log.Printf("Gen random write case cast: %s", elapsed)
 		wg.Done()
 	}()
-	file, err := utils.CreateFile(dir, "random_write.case")
-	defer file.Close()
+	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Create %s Error: %s", path, err)
 	}
 	tIndex := 0
 	tSum := 0
@@ -47,25 +46,25 @@ func genRandomWriteCase(dir string, count int, wg *sync.WaitGroup) {
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
 			if err != nil {
-				log.Fatalf("Write to %s Error: %s", dir+"/random_write.case", err)
+				log.Fatalf("Write to %s Error: %s", path, err)
 			}
 			tIndex = 0
 			sqlStr = ""
 		}
 	}
+	file.Close()
 }
 
-func genRandomReadCase(dir string, count int, wg *sync.WaitGroup) {
+func genRandomReadCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 		log.Printf("Gen random read case cast: %s", elapsed)
 		wg.Done()
 	}()
-	file, err := utils.CreateFile(dir, "random_read.case")
-	defer file.Close()
+	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Create %s Error: %s", path, err)
 	}
 	tIndex := 0
 	var sqlStr string
@@ -77,25 +76,25 @@ func genRandomReadCase(dir string, count int, wg *sync.WaitGroup) {
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
 			if err != nil {
-				log.Fatalf("Write to %s Error: %s", dir+"/random_read.case", err)
+				log.Fatalf("Write to %s Error: %s", path, err)
 			}
 			tIndex = 0
 			sqlStr = ""
 		}
 	}
+	file.Close()
 }
 
-func genOrderWriteCase(dir string, count int, wg *sync.WaitGroup) {
+func genOrderWriteCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 		log.Printf("Gen oeder write case cast: %s", elapsed)
 		wg.Done()
 	}()
-	file, err := utils.CreateFile(dir, "order_write.case")
-	defer file.Close()
+	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Create %s Error: %s", path, err)
 	}
 	index := 1000000000
 	tIndex := 0
@@ -107,25 +106,25 @@ func genOrderWriteCase(dir string, count int, wg *sync.WaitGroup) {
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
 			if err != nil {
-				log.Fatalf("Write to %s Error: %s", dir+"/order_write.case", err)
+				log.Fatalf("Write to %s Error: %s", path, err)
 			}
 			tIndex = 0
 			sqlStr = ""
 		}
 	}
+	file.Close()
 }
 
-func genOrderReadCase(dir string, count int, wg *sync.WaitGroup) {
+func genOrderReadCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 		log.Printf("Gen order read case cast: %s", elapsed)
 		wg.Done()
 	}()
-	file, err := utils.CreateFile(dir, "order_read.case")
-	defer file.Close()
+	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Create %s Error: %s", path, err)
 	}
 	tIndex := 0
 	var sqlStr string
@@ -135,26 +134,25 @@ func genOrderReadCase(dir string, count int, wg *sync.WaitGroup) {
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
 			if err != nil {
-				log.Fatalf("Write to %s Error: %s", dir+"/order_read.case", err)
+				log.Fatalf("Write to %s Error: %s", path, err)
 			}
 			tIndex = 0
 			sqlStr = ""
 		}
 	}
+	file.Close()
 }
 
-func genRandomRWCase(dir string, count int, wg *sync.WaitGroup) {
+func genRandomRWCase(path string, count int, wg *sync.WaitGroup) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
 		log.Printf("Gen random read and write case cast: %s", elapsed)
 		wg.Done()
 	}()
-
-	file, err := utils.CreateFile(dir, "random_read_write.case")
-	defer file.Close()
+	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Create %s Error: %s", path, err)
 	}
 	tIndex := 0
 	tSum := 0
@@ -165,7 +163,7 @@ func genRandomRWCase(dir string, count int, wg *sync.WaitGroup) {
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
 			if err != nil {
-				log.Fatalf("Write to %s Error: %s", dir+"/random_read_write.case", err)
+				log.Fatalf("Write to %s Error: %s", path, err)
 			}
 			tIndex = 0
 			sqlStr = ""
@@ -200,6 +198,7 @@ func genRandomRWCase(dir string, count int, wg *sync.WaitGroup) {
 			}
 		}
 	}
+	file.Close()
 }
 
 func genCase(ctx *cli.Context) error {
@@ -212,16 +211,17 @@ func genCase(ctx *cli.Context) error {
 		log.Fatalf("Get current path Error: %s", err)
 	}
 	casePath := curPath + "/case"
+	err = utils.CreateDir(casePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var wg sync.WaitGroup
 	wg.Add(5)
-	go genRandomWriteCase(casePath, count, &wg)
-	go genRandomReadCase(casePath, count, &wg)
-	go genOrderWriteCase(casePath, count, &wg)
-	go genOrderReadCase(casePath, count, &wg)
-	go genRandomRWCase(casePath, count, &wg)
+	go genRandomWriteCase(casePath+"/random_write.case", count, &wg)
+	go genRandomReadCase(casePath+"/random_read.case", count, &wg)
+	go genOrderWriteCase(casePath+"/order_write.case", count, &wg)
+	go genOrderReadCase(casePath+"/order_read.case", count, &wg)
+	go genRandomRWCase(casePath+"/random_read_write.case", count, &wg)
 	wg.Wait()
 	return nil
 }

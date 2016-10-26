@@ -14,17 +14,3 @@ func CreateDir(path string) error {
 	}
 	return nil
 }
-
-func CreateFile(dir, filename string) (*os.File, error) {
-	err := CreateDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	filePath := dir + "/" + filename
-	file, err := os.Create(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("Create %s Error: %s", filePath, err)
-	}
-	return file, nil
-}
