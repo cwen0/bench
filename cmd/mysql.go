@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cwen0/bench/utils"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/urfave/cli"
 )
@@ -86,16 +87,32 @@ func (m *mysql) openDB() {
 }
 
 func (m *mysql) test() {
+	count := len(m.testData)
+	jobChan := make(chan struct{}, 16*m.workerCount)
+	var doneChan chan struct{}
+	if count < m.workerCount {
+		doneChan = make(chan struct{}, count)
+	} else {
+		doneChan = make(chan struct{}, m.workerCount)
+	}
 	start := time.Now()
-	defer func() {
-		elapsed := time.Since(start)
-		log.Printf("Test case cost: %s", elapsed)
-	}()
-	for _, sql := range m.testData {
-		if _, err := m.db.Query(sql); err != nil {
-			log.Fatalf("Exec case Error: %s", err)
+	go utils.AddJobs(count, jobChan)
+	if count < m.workerCount {
+		for i := 0; i < count; i++ {
+			go utils.HandleJob(m.db, m.testData[i:i+1], m.batchCommitCount, jobChan, doneChan)
+		}
+	} else {
+		num := count / m.workerCount
+		remainder := count % m.workerCount
+		for i := 0; i < m.workerCount; i++ {
+			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, jobChan, doneChan)
+		}
+
+		if remainder != 0 {
+			go utils.HandleJob(m.db, m.testData[m.workerCount*num:count], m.batchCommitCount, jobChan, doneChan)
 		}
 	}
+	utils.Waiting(doneChan, start, count, m.workerCount)
 }
 
 func runMysql(ctx *cli.Context) error {
