@@ -14,6 +14,7 @@ func main() {
 	app.Commands = []cli.Command{
 		cmd.CmdMysql,
 		cmd.CmdTiDB,
+		cmd.CmdPrepare,
 	}
 	app.Run(os.Args)
 }

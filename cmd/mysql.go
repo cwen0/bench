@@ -85,8 +85,8 @@ func (m *mysql) test() {
 		elapsed := time.Since(start)
 		log.Printf("Test case cost: %s", elapsed)
 	}()
-	for _, test := range m.testData {
-		if _, err := m.db.Query(test); err != nil {
+	for _, sql := range m.testData {
+		if _, err := m.db.Query(sql); err != nil {
 			log.Fatalf("Exec case Error: %s", err)
 		}
 	}

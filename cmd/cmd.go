@@ -9,3 +9,11 @@ func stringFlag(name, value, usage string) cli.StringFlag {
 		Usage: usage,
 	}
 }
+
+func intFlag(name string, value int, usage string) cli.IntFlag {
+	return cli.IntFlag{
+		Name:  name,
+		Value: value,
+		Usage: usage,
+	}
+}

@@ -1,5 +1,5 @@
 # Importer Configuration.
-table-sql = "create table t(a int primary key, b double, c varchar(10));"
+table-sql = "create table t(a bigint primary key, b double, c varchar(10));"
 
 index-sql = "create unique index u_b on t(b);"
 
