@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cwen0/bench/utils"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/urfave/cli"
 )
@@ -26,6 +27,7 @@ var CmdMysql = cli.Command{
 		stringFlag("case-path", "", "test case path"),
 		intFlag("worker-count", 1, "parallel worker count"),
 		intFlag("commit-count", 1, "batch commit count"),
+		boolFlag("clean", "clean test table"),
 	},
 }
 
@@ -38,6 +40,7 @@ type mysql struct {
 	casePath         string
 	workerCount      int
 	batchCommitCount int
+	isClean          bool
 	testData         []string
 	db               *sql.DB
 }
@@ -55,6 +58,7 @@ func newMysql(ctx *cli.Context) *mysql {
 		casePath:         ctx.String("case-path"),
 		workerCount:      ctx.Int("worker-count"),
 		batchCommitCount: ctx.Int("commit-count"),
+		isClean:          ctx.Bool("clean"),
 	}
 }
 
@@ -72,6 +76,10 @@ func (m *mysql) readTestData() {
 	dataArr := bytes.Split(data, []byte("\n--"))
 	for _, v := range dataArr {
 		str := strings.TrimSpace(strings.Trim(string(v), "\n"))
+		str = strings.Trim(str, "\n")
+		if str == "" {
+			continue
+		}
 		m.testData = append(m.testData, str)
 	}
 }
@@ -86,15 +94,39 @@ func (m *mysql) openDB() {
 }
 
 func (m *mysql) test() {
+	count := len(m.testData)
+	var doneChan chan struct{}
+	if count < m.workerCount {
+		doneChan = make(chan struct{}, count)
+	} else {
+		doneChan = make(chan struct{}, m.workerCount)
+	}
 	start := time.Now()
-	defer func() {
-		elapsed := time.Since(start)
-		log.Printf("Test case cost: %s", elapsed)
-	}()
-	for _, sql := range m.testData {
-		if _, err := m.db.Query(sql); err != nil {
-			log.Fatalf("Exec case Error: %s", err)
+	if count < m.workerCount {
+		for i := 0; i < count; i++ {
+			go utils.HandleJob(m.db, m.testData[i:i+1], m.batchCommitCount, doneChan)
 		}
+	} else {
+		num := count / m.workerCount
+		for i := 0; i < m.workerCount; i++ {
+			if i == m.workerCount-1 {
+				go utils.HandleJob(m.db, m.testData[i*num:count], m.batchCommitCount, doneChan)
+				break
+			}
+			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, doneChan)
+		}
+	}
+	if count < m.workerCount {
+		utils.Waiting(doneChan, start, count, count)
+	} else {
+		utils.Waiting(doneChan, start, count, m.workerCount)
+	}
+}
+
+func (m *mysql) clean() {
+	_, err := m.db.Query("drop table t")
+	if err != nil {
+		log.Fatalf("Clean table Error: %s", err)
 	}
 }
 
@@ -103,5 +135,8 @@ func runMysql(ctx *cli.Context) error {
 	mql.readTestData()
 	mql.openDB()
 	mql.test()
+	if mql.isClean {
+		mql.clean()
+	}
 	return nil
 }

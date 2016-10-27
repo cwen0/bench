@@ -40,7 +40,7 @@ func genRandomWriteCase(path string, count int, wg *sync.WaitGroup) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		tSum += (r.Intn(100) * r.Intn(50))
 		index := 10000000000 + t*tSum
-		sqlStr += fmt.Sprintf("indert into t (a, b, c) vakeus (%d, %f, %s);\n--\n", index, float64(index), "test")
+		sqlStr += fmt.Sprintf("insert into t (a, b, c) values (%d, %f, \"%s\");\n--\n", index, float64(index), "test")
 		tIndex++
 		t *= (-1)
 		if tIndex >= 10 || i >= count-1 {
@@ -71,7 +71,7 @@ func genRandomReadCase(path string, count int, wg *sync.WaitGroup) {
 	for i := 0; i < count; i++ {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		num := r.Intn(100000000)
-		sqlStr += fmt.Sprintf("select (a, b, c) from t where a = %d;\n--\n", num)
+		sqlStr += fmt.Sprintf("select a, b, c from t where a = %d;\n--\n", num)
 		tIndex++
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
@@ -101,7 +101,7 @@ func genOrderWriteCase(path string, count int, wg *sync.WaitGroup) {
 	var sqlStr string
 	for i := 0; i < count; i++ {
 		index++
-		sqlStr += fmt.Sprintf("indert into t (a, b, c) vakeus (%d, %f, %s);\n--\n", index, float64(index), "test")
+		sqlStr += fmt.Sprintf("insert into t (a, b, c) values (%d, %f, \"%s\");\n--\n", index, float64(index), "test")
 		tIndex++
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
@@ -129,7 +129,7 @@ func genOrderReadCase(path string, count int, wg *sync.WaitGroup) {
 	tIndex := 0
 	var sqlStr string
 	for i := 0; i < count; i++ {
-		sqlStr += fmt.Sprintf("select (a, b, c) from t where a = %d;\n--\n", i)
+		sqlStr += fmt.Sprintf("select a, b, c from t where a = %d;\n--\n", i)
 		tIndex++
 		if tIndex >= 10 || i >= count-1 {
 			_, err := file.WriteString(sqlStr)
@@ -177,7 +177,7 @@ func genRandomRWCase(path string, count int, wg *sync.WaitGroup) {
 				tSum += r.Intn(100 * num)
 				index := 10000000000 + flag*tSum
 				tIndex++
-				sqlStr += fmt.Sprintf("indert into t (a, b, c) vakeus (%d, %f, %s);\n--\n", index, float64(index), "test")
+				sqlStr += fmt.Sprintf("indert into t (a, b, c) values (%d, %f, \"%s\");\n--\n", index, float64(index), "test")
 				writeToCseFile()
 				flag *= (-1)
 				i++
@@ -188,7 +188,7 @@ func genRandomRWCase(path string, count int, wg *sync.WaitGroup) {
 		} else {
 			for j := 0; j < num; j++ {
 				tNum := r.Intn(100000000)
-				sqlStr += fmt.Sprintf("select (a, b, c) from t where a = %d;\n--\n", tNum)
+				sqlStr += fmt.Sprintf("select a, b, c from t where a = %d;\n--\n", tNum)
 				writeToCseFile()
 				flag *= (-1)
 				i++

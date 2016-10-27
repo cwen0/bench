@@ -17,3 +17,10 @@ func intFlag(name string, value int, usage string) cli.IntFlag {
 		Usage: usage,
 	}
 }
+
+func boolFlag(name string, usage string) cli.BoolFlag {
+	return cli.BoolFlag{
+		Name:  name,
+		Usage: usage,
+	}
+}

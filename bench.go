@@ -13,7 +13,6 @@ func main() {
 	app.Usage = "db bench test"
 	app.Commands = []cli.Command{
 		cmd.CmdMysql,
-		cmd.CmdTiDB,
 		cmd.CmdPrepare,
 	}
 	app.Run(os.Args)
