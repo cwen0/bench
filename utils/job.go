@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/cwen0/bench/lib/resp"
 )
 
-func Waiting(doneChan chan struct{}, start time.Time, jobCount int, workerCount int) {
+func Waiting(doneChan chan struct{}, resChan chan resp.RespTime, start time.Time, jobCount int, workerCount int) {
 	for i := 0; i < workerCount; i++ {
 		<-doneChan
 	}
@@ -19,16 +21,38 @@ func Waiting(doneChan chan struct{}, start time.Time, jobCount int, workerCount 
 		tps = int64(jobCount) / seconds
 	}
 	fmt.Printf("total %d cases, cost %d seconds, tps %d, start %s, now %s\n", jobCount, seconds, tps, start, now)
+	var avgSum int64
+	tRes := <-resChan
+	tRes.Count()
+	avgSum = tRes.AvgTime
+	min := tRes.MinTime
+	max := tRes.MaxTime
+	for i := 1; i < workerCount; i++ {
+		res := <-resChan
+		res.Count()
+		avgSum += res.AvgTime
+		if max < res.MaxTime {
+			max = res.MaxTime
+		}
+		if min > res.MinTime {
+			min = res.MinTime
+		}
+	}
+	fmt.Println("--------response time-------- ")
+	fmt.Printf("avg     %f ms\n", float64(avgSum/int64(workerCount))/1000000)
+	fmt.Printf("min     %f ms\n", float64(min)/1000000)
+	fmt.Printf("max     %f ms\n", float64(max)/1000000)
 }
 
-func HandleJob(db *sql.DB, data []string, batch int, doneChan chan struct{}) {
+func HandleJob(db *sql.DB, data []string, batch int, resChan chan resp.RespTime, doneChan chan struct{}) {
 	temp := 0
 	count := 0
+	var res resp.RespTime
 	lenData := len(data)
 	for count < lenData {
 		temp++
 		if temp == batch {
-			doExec(db, data[count-batch+1:count+1])
+			doExec(db, data[count-batch+1:count+1], &res)
 			temp = 0
 		}
 		count++
@@ -36,12 +60,13 @@ func HandleJob(db *sql.DB, data []string, batch int, doneChan chan struct{}) {
 
 	if temp > 0 && count < lenData {
 		temp = 0
-		doExec(db, data[count:lenData])
+		doExec(db, data[count:lenData], &res)
 	}
 	doneChan <- struct{}{}
+	resChan <- res
 }
 
-func doExec(db *sql.DB, data []string) {
+func doExec(db *sql.DB, data []string, res *resp.RespTime) {
 	txn, err := db.Begin()
 	if err != nil {
 		log.Fatalf("Transaction bengin Error: %s", err)
@@ -50,10 +75,12 @@ func doExec(db *sql.DB, data []string) {
 		if sql == "" {
 			continue
 		}
+		start := time.Now()
 		_, err := txn.Exec(sql)
 		if err != nil {
 			log.Fatalf("Exec sql Error: %s", err)
 		}
+		res.TimesArr = append(res.TimesArr, time.Since(start))
 	}
 	err = txn.Commit()
 	if err != nil {
