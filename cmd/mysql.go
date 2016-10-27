@@ -19,6 +19,7 @@ var CmdMysql = cli.Command{
 		stringFlag("case-path", "", "test case path"),
 		intFlag("worker-count", 1, "parallel worker count"),
 		intFlag("commit-count", 1, "batch commit count"),
+		boolFlag("transcation,t", "transcation commit"),
 		boolFlag("clean", "clean test table"),
 	},
 }

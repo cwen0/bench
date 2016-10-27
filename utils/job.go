@@ -45,28 +45,46 @@ func Waiting(doneChan chan struct{}, resChan chan resp.RespTime, start time.Time
 }
 
 func HandleJob(db *sql.DB, data []string, batch int, resChan chan resp.RespTime, doneChan chan struct{}) {
-	temp := 0
-	count := 0
 	var res resp.RespTime
-	lenData := len(data)
-	for count < lenData {
-		temp++
-		if temp == batch {
-			doExec(db, data[count-batch+1:count+1], &res)
-			temp = 0
+	if batch <= 0 {
+		doExec(db, data, &res)
+	} else {
+		temp := 0
+		count := 0
+		lenData := len(data)
+		for count < lenData {
+			temp++
+			if temp == batch {
+				doTranscationExec(db, data[count-batch+1:count+1], &res)
+				temp = 0
+			}
+			count++
 		}
-		count++
-	}
 
-	if temp > 0 && count < lenData {
-		temp = 0
-		doExec(db, data[count:lenData], &res)
+		if temp > 0 && count < lenData {
+			temp = 0
+			doTranscationExec(db, data[count:lenData], &res)
+		}
 	}
 	doneChan <- struct{}{}
 	resChan <- res
 }
 
 func doExec(db *sql.DB, data []string, res *resp.RespTime) {
+	for _, sql := range data {
+		if sql == "" {
+			continue
+		}
+		start := time.Now()
+		_, err := db.Exec(sql)
+		if err != nil {
+			log.Fatalf("Exec sql Error: %s", err)
+		}
+		res.TimesArr = append(res.TimesArr, time.Since(start))
+	}
+}
+
+func doTranscationExec(db *sql.DB, data []string, res *resp.RespTime) {
 	txn, err := db.Begin()
 	if err != nil {
 		log.Fatalf("Transaction bengin Error: %s", err)
