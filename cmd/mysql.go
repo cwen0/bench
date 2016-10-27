@@ -27,6 +27,7 @@ var CmdMysql = cli.Command{
 		stringFlag("case-path", "", "test case path"),
 		intFlag("worker-count", 1, "parallel worker count"),
 		intFlag("commit-count", 1, "batch commit count"),
+		boolFlag("clean", "clean test table"),
 	},
 }
 
@@ -39,6 +40,7 @@ type mysql struct {
 	casePath         string
 	workerCount      int
 	batchCommitCount int
+	isClean          bool
 	testData         []string
 	db               *sql.DB
 }
@@ -56,6 +58,7 @@ func newMysql(ctx *cli.Context) *mysql {
 		casePath:         ctx.String("case-path"),
 		workerCount:      ctx.Int("worker-count"),
 		batchCommitCount: ctx.Int("commit-count"),
+		isClean:          ctx.Bool("clean"),
 	}
 }
 
@@ -113,7 +116,18 @@ func (m *mysql) test() {
 			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, doneChan)
 		}
 	}
-	utils.Waiting(doneChan, start, count, m.workerCount)
+	if count < m.workerCount {
+		utils.Waiting(doneChan, start, count, count)
+	} else {
+		utils.Waiting(doneChan, start, count, m.workerCount)
+	}
+}
+
+func (m *mysql) clean() {
+	_, err := m.db.Query("drop table t")
+	if err != nil {
+		log.Fatalf("Clean table Error: %s", err)
+	}
 }
 
 func runMysql(ctx *cli.Context) error {
@@ -121,5 +135,8 @@ func runMysql(ctx *cli.Context) error {
 	mql.readTestData()
 	mql.openDB()
 	mql.test()
+	if mql.isClean {
+		mql.clean()
+	}
 	return nil
 }

@@ -28,9 +28,6 @@ func HandleJob(db *sql.DB, data []string, batch int, doneChan chan struct{}) {
 	for count < lenData {
 		temp++
 		if temp == batch {
-			if data[count-batch+1] == "" {
-				fmt.Println(count)
-			}
 			doExec(db, data[count-batch+1:count+1])
 			temp = 0
 		}
@@ -55,7 +52,6 @@ func doExec(db *sql.DB, data []string) {
 		}
 		_, err := txn.Exec(sql)
 		if err != nil {
-			fmt.Println(len(data))
 			log.Fatalf("Exec sql Error: %s", err)
 		}
 	}
