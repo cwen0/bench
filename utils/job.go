@@ -61,9 +61,9 @@ func HandleJob(db *sql.DB, data []string, batch int, resChan chan resp.RespTime,
 			count++
 		}
 
-		if temp > 0 && count < lenData {
+		if temp > 0 {
 			temp = 0
-			doTranscationExec(db, data[count:lenData], &res)
+			doTranscationExec(db, data[count-1:lenData], &res)
 		}
 	}
 	doneChan <- struct{}{}
