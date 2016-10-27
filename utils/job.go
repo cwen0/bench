@@ -7,13 +7,6 @@ import (
 	"time"
 )
 
-func AddJobs(count int, jobChan chan struct{}) {
-	for i := 0; i < count; i++ {
-		jobChan <- struct{}{}
-	}
-	close(jobChan)
-}
-
 func Waiting(doneChan chan struct{}, start time.Time, jobCount int, workerCount int) {
 	for i := 0; i < workerCount; i++ {
 		<-doneChan
@@ -28,20 +21,25 @@ func Waiting(doneChan chan struct{}, start time.Time, jobCount int, workerCount 
 	fmt.Printf("total %d cases, cost %d seconds, tps %d, start %s, now %s\n", jobCount, seconds, tps, start, now)
 }
 
-func HandleJob(db *sql.DB, data []string, batch int, jobChan chan struct{}, doneChan chan struct{}) {
+func HandleJob(db *sql.DB, data []string, batch int, doneChan chan struct{}) {
 	temp := 0
 	count := 0
-	for range jobChan {
+	lenData := len(data)
+	for count < lenData {
 		temp++
 		if temp == batch {
+			if data[count-batch+1] == "" {
+				fmt.Println(count)
+			}
 			doExec(db, data[count-batch+1:count+1])
 			temp = 0
 		}
 		count++
 	}
-	if temp > 0 {
+
+	if temp > 0 && count < lenData {
 		temp = 0
-		doExec(db, data[count:len(data)])
+		doExec(db, data[count:lenData])
 	}
 	doneChan <- struct{}{}
 }
@@ -52,8 +50,12 @@ func doExec(db *sql.DB, data []string) {
 		log.Fatalf("Transaction bengin Error: %s", err)
 	}
 	for _, sql := range data {
+		if sql == "" {
+			continue
+		}
 		_, err := txn.Exec(sql)
 		if err != nil {
+			fmt.Println(len(data))
 			log.Fatalf("Exec sql Error: %s", err)
 		}
 	}

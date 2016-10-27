@@ -73,6 +73,10 @@ func (m *mysql) readTestData() {
 	dataArr := bytes.Split(data, []byte("\n--"))
 	for _, v := range dataArr {
 		str := strings.TrimSpace(strings.Trim(string(v), "\n"))
+		str = strings.Trim(str, "\n")
+		if str == "" {
+			continue
+		}
 		m.testData = append(m.testData, str)
 	}
 }
@@ -88,7 +92,6 @@ func (m *mysql) openDB() {
 
 func (m *mysql) test() {
 	count := len(m.testData)
-	jobChan := make(chan struct{}, 16*m.workerCount)
 	var doneChan chan struct{}
 	if count < m.workerCount {
 		doneChan = make(chan struct{}, count)
@@ -96,20 +99,18 @@ func (m *mysql) test() {
 		doneChan = make(chan struct{}, m.workerCount)
 	}
 	start := time.Now()
-	go utils.AddJobs(count, jobChan)
 	if count < m.workerCount {
 		for i := 0; i < count; i++ {
-			go utils.HandleJob(m.db, m.testData[i:i+1], m.batchCommitCount, jobChan, doneChan)
+			go utils.HandleJob(m.db, m.testData[i:i+1], m.batchCommitCount, doneChan)
 		}
 	} else {
 		num := count / m.workerCount
-		remainder := count % m.workerCount
 		for i := 0; i < m.workerCount; i++ {
-			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, jobChan, doneChan)
-		}
-
-		if remainder != 0 {
-			go utils.HandleJob(m.db, m.testData[m.workerCount*num:count], m.batchCommitCount, jobChan, doneChan)
+			if i == m.workerCount-1 {
+				go utils.HandleJob(m.db, m.testData[i*num:count], m.batchCommitCount, doneChan)
+				break
+			}
+			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, doneChan)
 		}
 	}
 	utils.Waiting(doneChan, start, count, m.workerCount)
