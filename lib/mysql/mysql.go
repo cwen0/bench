@@ -23,6 +23,7 @@ type mysql struct {
 	casePath         string
 	workerCount      int
 	batchCommitCount int
+	isTranscation    bool
 	isClean          bool
 	testData         []string
 	db               *sql.DB
@@ -41,6 +42,7 @@ func NewMysql(ctx *cli.Context) *mysql {
 		casePath:         ctx.String("case-path"),
 		workerCount:      ctx.Int("worker-count"),
 		batchCommitCount: ctx.Int("commit-count"),
+		isTranscation:    ctx.Bool("transcation"),
 		isClean:          ctx.Bool("clean"),
 	}
 }
@@ -86,6 +88,9 @@ func (m *mysql) Test() {
 	} else {
 		doneChan = make(chan struct{}, m.workerCount)
 		responnseChan = make(chan resp.RespTime, m.workerCount)
+	}
+	if !m.isTranscation {
+		m.batchCommitCount = -1
 	}
 	start := time.Now()
 	if count < m.workerCount {
