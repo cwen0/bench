@@ -3,3 +3,7 @@ immysql:
 
 imtidb:
 	importer -config ./tidb.toml
+
+install:
+	go install
+
