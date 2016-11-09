@@ -26,7 +26,7 @@ type mysql struct {
 	isTranscation    bool
 	isClean          bool
 	testData         []string
-	db               *sql.DB
+	dbs              []*sql.DB
 }
 
 func NewMysql(ctx *cli.Context) *mysql {
@@ -70,12 +70,24 @@ func (m *mysql) ReadTestData() {
 }
 
 func (m *mysql) OpenDB() {
-	dbAddr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", m.user, m.password, m.host, m.port, m.dbName)
-	dbTemp, err := sql.Open("mysql", dbAddr)
-	if err != nil {
-		log.Fatalf("Open mysql db Error: %s", err)
+	m.dbs = make([]*sql.DB, 0, m.workerCount)
+	for i := 0; i < m.workerCount; i++ {
+		dbAddr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", m.user, m.password, m.host, m.port, m.dbName)
+		dbTemp, err := sql.Open("mysql", dbAddr)
+		if err != nil {
+			log.Fatalf("Open mysql db Error: %s", err)
+		}
+		m.dbs = append(m.dbs, dbTemp)
 	}
-	m.db = dbTemp
+}
+
+func (m *mysql) CloseDB() {
+	for _, db := range m.dbs {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf("close db failed - %v", err)
+		}
+	}
 }
 
 func (m *mysql) Test() {
@@ -83,39 +95,28 @@ func (m *mysql) Test() {
 	var doneChan chan struct{}
 	var responnseChan chan resp.RespTime
 	if count < m.workerCount {
-		doneChan = make(chan struct{}, count)
-		responnseChan = make(chan resp.RespTime, count)
-	} else {
-		doneChan = make(chan struct{}, m.workerCount)
-		responnseChan = make(chan resp.RespTime, m.workerCount)
+		log.Fatal("table size less than workerCount")
 	}
+	doneChan = make(chan struct{}, m.workerCount)
+	responnseChan = make(chan resp.RespTime, m.workerCount)
+	tCommitC := m.batchCommitCount
 	if !m.isTranscation {
 		m.batchCommitCount = -1
 	}
 	start := time.Now()
-	if count < m.workerCount {
-		for i := 0; i < count; i++ {
-			go utils.HandleJob(m.db, m.testData[i:i+1], m.batchCommitCount, responnseChan, doneChan)
+	num := count / m.workerCount
+	for i := 0; i < m.workerCount; i++ {
+		if i == m.workerCount-1 {
+			go utils.HandleJob(m.dbs[i], m.testData[i*num:count], m.batchCommitCount, responnseChan, doneChan)
+			break
 		}
-	} else {
-		num := count / m.workerCount
-		for i := 0; i < m.workerCount; i++ {
-			if i == m.workerCount-1 {
-				go utils.HandleJob(m.db, m.testData[i*num:count], m.batchCommitCount, responnseChan, doneChan)
-				break
-			}
-			go utils.HandleJob(m.db, m.testData[i*num:(i+1)*num], m.batchCommitCount, responnseChan, doneChan)
-		}
+		go utils.HandleJob(m.dbs[i], m.testData[i*num:(i+1)*num], m.batchCommitCount, responnseChan, doneChan)
 	}
-	if count < m.workerCount {
-		utils.Waiting(doneChan, responnseChan, start, count, count)
-	} else {
-		utils.Waiting(doneChan, responnseChan, start, count, m.workerCount)
-	}
+	utils.Waiting(doneChan, responnseChan, start, count, m.workerCount, tCommitC)
 }
 
 func (m *mysql) Clean() {
-	_, err := m.db.Query("drop table t")
+	_, err := m.dbs[0].Query("drop table t")
 	if err != nil {
 		log.Fatalf("Clean table Error: %s", err)
 	}

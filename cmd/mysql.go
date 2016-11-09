@@ -28,6 +28,7 @@ func runMysql(ctx *cli.Context) error {
 	mql := mysql.NewMysql(ctx)
 	mql.ReadTestData()
 	mql.OpenDB()
+	defer mql.CloseDB()
 	mql.Test()
 	if mql.IsClean() {
 		mql.Clean()

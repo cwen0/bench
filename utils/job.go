@@ -9,18 +9,18 @@ import (
 	"github.com/cwen0/bench/lib/resp"
 )
 
-func Waiting(doneChan chan struct{}, resChan chan resp.RespTime, start time.Time, jobCount int, workerCount int) {
+func Waiting(doneChan chan struct{}, resChan chan resp.RespTime, start time.Time, jobCount int, workerCount int, commitC int) {
 	for i := 0; i < workerCount; i++ {
 		<-doneChan
 	}
 	close(doneChan)
 	now := time.Now()
 	seconds := now.Unix() - start.Unix()
-	tps := int64(-1)
+	qps := int64(-1)
 	if seconds > 0 {
-		tps = int64(jobCount) / seconds
+		qps = int64(jobCount) / seconds
 	}
-	fmt.Printf("total %d cases, cost %d seconds, tps %d, start %s, now %s\n", jobCount, seconds, tps, start, now)
+	fmt.Printf("total %d cases, cost %d seconds, qps %d, tps %d, start %s, now %s\n", jobCount, seconds, qps, qps/int64(commitC), start, now)
 	var avgSum int64
 	tRes := <-resChan
 	tRes.Count()
